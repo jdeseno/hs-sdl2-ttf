@@ -4,6 +4,7 @@ module Graphics.UI.SDL.TTF
   , Font(..)
   , PointSize(..)
   , FontStyle(..)
+  , FreeTypeHinting(..)
   , version
   , byteOrderNative
   , byteOrderSwapped
@@ -17,6 +18,8 @@ module Graphics.UI.SDL.TTF
   , setFontStyle
   , getFontOutline
   , setFontOutline
+  , getFontHinting
+  , setFontHinting
   ) where
 
 import Foreign
@@ -160,4 +163,37 @@ setFontOutline :: Font -> Int -> IO ()
 setFontOutline font size =
   withForeignPtr font $ \font' ->
     ttfSetFontOutline' font' (fromIntegral size)
+
+data FreeTypeHinting
+   = HintingNormal | HintingLight | HintingMono | HintingNone
+   deriving (Show, Eq)
+
+freeTypeHintingToConstant :: FreeTypeHinting -> #{type int}
+freeTypeHintingToConstant HintingNormal = #{const TTF_HINTING_NORMAL}
+freeTypeHintingToConstant HintingLight  = #{const TTF_HINTING_LIGHT}
+freeTypeHintingToConstant HintingMono   = #{const TTF_HINTING_MONO}
+freeTypeHintingToConstant HintingNone   = #{const TTF_HINTING_NONE}
+
+constantToFreeTypeHinting :: #{type int} -> FreeTypeHinting
+constantToFreeTypeHinting #{const TTF_HINTING_NORMAL} = HintingNormal
+constantToFreeTypeHinting #{const TTF_HINTING_LIGHT}  = HintingLight
+constantToFreeTypeHinting #{const TTF_HINTING_MONO}   = HintingMono
+constantToFreeTypeHinting #{const TTF_HINTING_NONE}   = HintingNone
+constantToFreeTypeHinting _ = error "(constantToFreeTypeHinting) unhandled hinting"
+
+foreign import ccall unsafe "TTF_GetFontHinting"
+  ttfGetFontHinting' :: Ptr FontStruct -> IO #{type int}
+
+getFontHinting :: Font -> IO FreeTypeHinting
+getFontHinting font =
+  withForeignPtr font $ \font' ->
+    ttfGetFontHinting' font' >>= return . constantToFreeTypeHinting
+
+foreign import ccall unsafe "TTF_SetFontHinting"
+  ttfSetFontHinting' :: Ptr FontStruct -> #{type int} -> IO ()
+
+setFontHinting :: Font -> FreeTypeHinting -> IO ()
+setFontHinting font hinting =
+  withForeignPtr font $ \font' ->
+    ttfSetFontHinting' font' (freeTypeHintingToConstant hinting)
 
