@@ -20,6 +20,16 @@ module Graphics.UI.SDL.TTF
   , setFontOutline
   , getFontHinting
   , setFontHinting
+  , fontHeight
+  , fontAscent
+  , fontDescent
+  , fontLineSkip
+  , getFontKerning
+  , setFontKerning
+  , fontFaces
+  , fontFaceIsFixedWidth
+  , fontFaceFamilyName
+  , fontFaceStyleName
   ) where
 
 import Foreign
@@ -196,4 +206,84 @@ setFontHinting :: Font -> FreeTypeHinting -> IO ()
 setFontHinting font hinting =
   withForeignPtr font $ \font' ->
     ttfSetFontHinting' font' (freeTypeHintingToConstant hinting)
+
+foreign import ccall unsafe "TTF_FontHeight"
+  ttfFontHeight' :: Ptr FontStruct -> IO #{type int}
+
+fontHeight :: Font -> IO Int
+fontHeight font =
+  withForeignPtr font $ \font' ->
+    ttfFontHeight' font' >>= return . fromIntegral
+
+foreign import ccall unsafe "TTF_FontAscent"
+  ttfFontAscent :: Ptr FontStruct -> IO #{type int}
+
+fontAscent :: Font -> IO Int
+fontAscent font =
+  withForeignPtr font $ \font' ->
+    ttfFontAscent font' >>= return . fromIntegral
+
+foreign import ccall unsafe "TTF_FontDescent"
+  ttfFontDescent' :: Ptr FontStruct -> IO #{type int}
+
+fontDescent :: Font -> IO Int
+fontDescent font =
+  withForeignPtr font $ \font' ->
+    ttfFontDescent' font' >>= return . fromIntegral
+
+foreign import ccall unsafe "TTF_FontLineSkip"
+  ttfFontLineSkip' :: Ptr FontStruct -> IO #{type int}
+
+fontLineSkip :: Font -> IO Int
+fontLineSkip font =
+  withForeignPtr font $ \font' ->
+    ttfFontLineSkip' font' >>= return . fromIntegral
+
+foreign import ccall unsafe "TTF_GetFontKerning"
+  ttfGetFontKerning' :: Ptr FontStruct -> IO #{type int}
+
+getFontKerning :: Font -> IO Bool
+getFontKerning font =
+  withForeignPtr font $ \font' ->
+    ttfGetFontKerning' font' >>= return . toBool
+
+foreign import ccall unsafe "TTF_GetFontKerning"
+  ttfSetFontKerning' :: Ptr FontStruct -> #{type int} -> IO ()
+
+setFontKerning :: Font -> Bool -> IO ()
+setFontKerning font dokerning =
+  withForeignPtr font $ \font' ->
+    ttfSetFontKerning' font' (fromBool dokerning)
+
+foreign import ccall unsafe "TTF_FontFaces"
+  ttfFontFaces' :: Ptr FontStruct -> IO #{type long}
+
+fontFaces :: Font -> IO Int
+fontFaces font =
+  withForeignPtr font $ \font' ->
+    ttfFontFaces' font' >>= return . fromIntegral
+
+foreign import ccall unsafe "TTF_FontFaceIsFixedWidth"
+  ttfFontFaceIsFixedWidth' :: Ptr FontStruct -> IO #{type int}
+
+fontFaceIsFixedWidth :: Font -> IO Bool
+fontFaceIsFixedWidth font =
+  withForeignPtr font $ \font' ->
+    ttfFontFaceIsFixedWidth' font' >>= return . toBool
+
+foreign import ccall unsafe "TTF_FontFaceFamilyName"
+  ttfFontFaceFamilyName' :: Ptr FontStruct -> IO CString
+
+fontFaceFamilyName :: Font -> IO String
+fontFaceFamilyName font =
+  withForeignPtr font $ \font' ->
+    ttfFontFaceFamilyName' font' >>= peekCString
+
+foreign import ccall unsafe "TTF_FontFaceStyleName"
+  ttfFontFaceStyleName' :: Ptr FontStruct -> IO CString
+
+fontFaceStyleName :: Font -> IO String
+fontFaceStyleName font =
+  withForeignPtr font $ \font' ->
+    ttfFontFaceStyleName' font' >>= peekCString
 
