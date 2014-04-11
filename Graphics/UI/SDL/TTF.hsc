@@ -30,6 +30,8 @@ module Graphics.UI.SDL.TTF
   , fontFaceIsFixedWidth
   , fontFaceFamilyName
   , fontFaceStyleName
+  , glyphIsProvided
+  , glyphMetrics
   ) where
 
 import Foreign
@@ -286,4 +288,36 @@ fontFaceStyleName :: Font -> IO String
 fontFaceStyleName font =
   withForeignPtr font $ \font' ->
     ttfFontFaceStyleName' font' >>= peekCString
+
+foreign import ccall unsafe "TTF_GlyphIsProvided"
+  ttfGlyphIsProvided' :: Ptr FontStruct -> #{type Uint16} -> IO #{type int}
+
+glyphIsProvided :: Font -> #{type Uint16} -> IO Bool
+glyphIsProvided font glyph =
+  withForeignPtr font $ \font' ->
+    ttfGlyphIsProvided' font' glyph >>= return . toBool
+
+foreign import ccall unsafe "TTF_GlyphMetrics"
+  ttfGlyphMetrics' :: Ptr FontStruct -> #{type Uint16} ->
+                      Ptr #{type int} -> Ptr #{type int} ->
+                      Ptr #{type int} -> Ptr #{type int} ->
+                      Ptr #{type int} -> IO #{type int}
+
+-- | (minx, maxx, miny, maxy, advanced, index)
+glyphMetrics :: Font -> #{type Uint16} -> IO (Int, Int, Int, Int, Int, Int)
+glyphMetrics font glyph =
+  alloca $ \minx' ->
+  alloca $ \maxx' ->
+  alloca $ \miny' ->
+  alloca $ \maxy' ->
+  alloca $ \advanced' ->
+  withForeignPtr font $ \font' -> do
+    index' <- ttfGlyphMetrics' font' glyph minx' maxx' miny' maxy' advanced'
+    minx <- fmap fromIntegral $ peek minx'
+    maxx <- fmap fromIntegral $ peek maxx'
+    miny <- fmap fromIntegral $ peek miny'
+    maxy <- fmap fromIntegral $ peek maxy'
+    advanced <- fmap fromIntegral $ peek advanced'
+    let index = fromIntegral index'
+    return (minx, maxx, miny, maxy, advanced, index)
 
