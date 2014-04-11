@@ -3,6 +3,7 @@ module Graphics.UI.SDL.TTF
   ( FontStruct(..)
   , Font(..)
   , PointSize(..)
+  , FontStyle(..)
   , version
   , byteOrderNative
   , byteOrderSwapped
@@ -12,6 +13,10 @@ module Graphics.UI.SDL.TTF
   , openFontIndex
   , openFontRW
   , openFontIndexRW 
+  , getFontStyle
+  , setFontStyle
+  , getFontOutline
+  , setFontOutline
   ) where
 
 import Foreign
@@ -102,4 +107,57 @@ openFontIndexRW rwops dofree ptsize index =
         ptsize' = fromIntegral ptsize
         index'  = fromIntegral ptsize
     in ttfOpenFontIndexRW' rwops' dofree' ptsize' index' >>= mkFinalizedFont
+
+data FontStyle
+   = NORMAL | BOLD | ITALIC | UNDERLINE | STRIKETHROUGH
+   deriving (Eq, Show)
+
+fontStyleToConstant :: FontStyle -> #{type int}
+fontStyleToConstant style =
+  case style of
+    NORMAL -> #{const TTF_STYLE_NORMAL}
+    BOLD   -> #{const TTF_STYLE_BOLD}
+    ITALIC -> #{const TTF_STYLE_ITALIC}
+    UNDERLINE -> #{const TTF_STYLE_UNDERLINE}
+    STRIKETHROUGH -> #{const TTF_STYLE_STRIKETHROUGH}
+
+constantToFontStyle :: #{type int} -> FontStyle
+constantToFontStyle #{const TTF_STYLE_NORMAL} = NORMAL
+constantToFontStyle #{const TTF_STYLE_BOLD} = BOLD
+constantToFontStyle #{const TTF_STYLE_ITALIC} = ITALIC
+constantToFontStyle #{const TTF_STYLE_UNDERLINE} = UNDERLINE
+constantToFontStyle #{const TTF_STYLE_STRIKETHROUGH} = STRIKETHROUGH
+constantToFontStyle _ = error "(constantToFontStyle) unhandled font style"
+
+foreign import ccall unsafe "TTF_GetFontStyle"
+  ttfGetFontStyle' :: Ptr FontStruct -> IO #{type int}
+
+getFontStyle :: Font -> IO FontStyle
+getFontStyle font =
+  withForeignPtr font $ \font' ->
+    ttfGetFontStyle' font' >>= return . constantToFontStyle
+
+foreign import ccall unsafe "TTF_SetFontStyle"
+  ttfSetFontStyle' :: Ptr FontStruct -> #{type int} -> IO ()
+
+setFontStyle :: Font -> FontStyle -> IO ()
+setFontStyle font style =
+  withForeignPtr font $ \font' ->
+    ttfSetFontStyle' font' (fontStyleToConstant style)
+
+foreign import ccall unsafe "TTF_GetFontOutline"
+  ttfGetFontOutline' :: Ptr FontStruct -> IO #{type int}
+
+getFontOutline :: Font -> IO Int
+getFontOutline font =
+  withForeignPtr font $ \font' ->
+    ttfGetFontOutline' font' >>= return . fromIntegral
+
+foreign import ccall unsafe "TTF_SetFontOutline"
+  ttfSetFontOutline' :: Ptr FontStruct -> #{type int} -> IO ()
+
+setFontOutline :: Font -> Int -> IO ()
+setFontOutline font size =
+  withForeignPtr font $ \font' ->
+    ttfSetFontOutline' font' (fromIntegral size)
 
