@@ -42,6 +42,9 @@ module Graphics.UI.SDL.TTF
   , renderUTF8Blended
   , renderTextBlendedWrapped 
   , renderUTF8BlendedWrapped 
+  , quit
+  , wasInit
+  , getFontKerningSize
   ) where
 
 import Foreign
@@ -460,4 +463,22 @@ renderUTF8BlendedWrapped font text fg wraplen =
 -- TODO TTF_RenderUNICODE_Blended_wrapped
 -- TODO TTF_RenderGlyph_Blended_wrapped
 
+foreign import ccall unsafe "TTF_Quit"
+  quit :: IO ()
+
+foreign import ccall unsafe "TTF_WasInit"
+  wasInit' :: IO #{type int}
+
+wasInit :: IO Bool
+wasInit = wasInit' >>= return . toBool
+
+foreign import ccall unsafe "TTF_GetFontKerningSize"
+  ttfGetFontKerningSize' :: Ptr FontStruct -> #{type int} -> #{type int} -> IO #{type int}
+
+getFontKerningSize :: Font -> Int -> Int -> IO Int
+getFontKerningSize font previndex index =
+  withForeignPtr font $ \font' ->
+    let previndex' = fromIntegral previndex
+        index'     = fromIntegral index
+    in ttfGetFontKerningSize' font' previndex' index' >>= return . fromIntegral
 
