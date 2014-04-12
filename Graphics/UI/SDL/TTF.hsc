@@ -32,12 +32,24 @@ module Graphics.UI.SDL.TTF
   , fontFaceStyleName
   , glyphIsProvided
   , glyphMetrics
+  , sizeText
+  , sizeUTF8
+  , renderTextSolid
+  , renderUTF8Solid
+  , renderTextShaded
+  , renderUTF8Shaded
+  , renderTextBlended
+  , renderUTF8Blended
+  , renderTextBlendedWrapped 
+  , renderUTF8BlendedWrapped 
   ) where
 
 import Foreign
 import Foreign.C.String
 import Prelude hiding (init)
 import Graphics.UI.SDL.Types
+import Graphics.UI.SDL.Color (Color(..))
+import Graphics.UI.SDL.Raw (mkFinalizedSurface)
 
 -- | (Major, Minor, Patchlevel)
 version :: (Int, Int, Int)
@@ -320,4 +332,132 @@ glyphMetrics font glyph =
     advanced <- fmap fromIntegral $ peek advanced'
     let index = fromIntegral index'
     return (minx, maxx, miny, maxy, advanced, index)
+
+foreign import ccall unsafe "TTF_SizeText"
+  ttfSizeText' :: Ptr FontStruct -> CString -> Ptr #{type int} -> Ptr #{type int} -> IO #{type int}
+
+-- | returns (width, height)
+sizeText :: Font -> String -> IO (Int, Int)
+sizeText font text =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  alloca $ \w' ->
+  alloca $ \h' -> do
+    ret <- ttfSizeText' font' text' w' h'
+    if ret == 0
+    then do { w <- peek w' ; h <- peek h' ; return (fromIntegral w, fromIntegral h) }
+    else error "sizeText"
+
+foreign import ccall unsafe "TTF_SizeUTF8"
+  ttfSizeUTF8' :: Ptr FontStruct -> CString -> Ptr #{type int} -> Ptr #{type int} -> IO #{type int}
+
+-- | returns (width, height)
+sizeUTF8 :: Font -> String -> IO (Int, Int)
+sizeUTF8 font text =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  alloca $ \w' ->
+  alloca $ \h' -> do
+    ret <- ttfSizeUTF8' font' text' w' h'
+    if ret == 0
+    then do { w <- peek w' ; h <- peek h' ; return (fromIntegral w, fromIntegral h) }
+    else error "sizeTextUTF8"
+
+-- TODO TTF_SizeUNICODE
+
+foreign import ccall unsafe "TTF_RenderText_Solid"
+  ttfRenderTextSolid' :: Ptr FontStruct -> CString -> Ptr Color -> IO (Ptr SurfaceStruct)
+
+renderTextSolid :: Font -> String -> Color -> IO Surface
+renderTextSolid font text color =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  with color $ \color' ->
+    ttfRenderTextSolid' font' text' color' >>= mkFinalizedSurface
+
+foreign import ccall unsafe "TTF_RenderUTF8_Solid"
+  ttfRenderUTF8Solid' :: Ptr FontStruct -> CString -> Ptr Color -> IO (Ptr SurfaceStruct)
+
+renderUTF8Solid :: Font -> String -> Color -> IO Surface
+renderUTF8Solid font text color =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  with color $ \color' ->
+    ttfRenderUTF8Solid' font' text' color' >>= mkFinalizedSurface
+
+-- TODO TTF_RenderUNICODE_Solid
+-- TODO TTF_RenderGlyphSolid
+
+foreign import ccall unsafe "TTF_RenderText_Shaded"
+  ttfRenderTextShaded' :: Ptr FontStruct -> CString -> Ptr Color -> Ptr Color -> IO (Ptr SurfaceStruct)
+
+renderTextShaded :: Font -> String -> Color -> Color -> IO Surface
+renderTextShaded font text fg bg =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  with fg $ \fg' ->
+  with bg $ \bg' ->
+    ttfRenderTextShaded' font' text' fg' bg' >>= mkFinalizedSurface
+
+foreign import ccall unsafe "TTF_RenderUTF8_Shaded"
+  ttfRenderUTF8Shaded' :: Ptr FontStruct -> CString -> Ptr Color -> Ptr Color -> IO (Ptr SurfaceStruct)
+
+renderUTF8Shaded :: Font -> String -> Color -> Color -> IO Surface
+renderUTF8Shaded font text fg bg =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  with fg $ \fg' ->
+  with bg $ \bg' ->
+    ttfRenderUTF8Shaded' font' text' fg' bg' >>= mkFinalizedSurface
+
+-- TODO TTF_RenderUNICODE_Shaded
+-- TODO TTF_RenderGlyph_Shaded
+
+foreign import ccall unsafe "TTF_RenderText_Blended"
+  ttfRenderTextBlended' :: Ptr FontStruct -> CString -> Ptr Color -> IO (Ptr SurfaceStruct)
+
+renderTextBlended :: Font -> String -> Color -> IO Surface
+renderTextBlended font text color =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  with color $ \color' ->
+    ttfRenderTextBlended' font' text' color' >>= mkFinalizedSurface
+
+foreign import ccall unsafe "TTF_RenderUTF8_Blended"
+  ttfRenderUTF8Blended' :: Ptr FontStruct -> CString -> Ptr Color -> IO (Ptr SurfaceStruct)
+
+renderUTF8Blended :: Font -> String -> Color -> IO Surface
+renderUTF8Blended font text color =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  with color $ \color' ->
+    ttfRenderUTF8Blended' font' text' color' >>= mkFinalizedSurface
+
+-- TODO TTF_RenderUNICODE_Blended
+
+foreign import ccall unsafe "TTF_RenderText_Blended_Wrapped"
+  ttfRenderTextBlendedWrapped' :: Ptr FontStruct -> CString -> Ptr Color -> #{type Uint32} -> IO (Ptr SurfaceStruct)
+
+renderTextBlendedWrapped :: Font -> String -> Color -> Int -> IO Surface
+renderTextBlendedWrapped font text fg wraplen =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  with fg $ \fg' ->
+    ttfRenderTextBlendedWrapped' font' text' fg' (fromIntegral wraplen) >>=
+      mkFinalizedSurface
+
+foreign import ccall unsafe "TTF_RenderUTF8_Blended_Wrapped"
+  ttfRenderUTF8BlendedWrapped' :: Ptr FontStruct -> CString -> Ptr Color -> #{type Uint32} -> IO (Ptr SurfaceStruct)
+
+renderUTF8BlendedWrapped :: Font -> String -> Color -> Int -> IO Surface
+renderUTF8BlendedWrapped font text fg wraplen =
+  withForeignPtr font $ \font' ->
+  withCString text $ \text' ->
+  with fg $ \fg' ->
+    ttfRenderUTF8BlendedWrapped' font' text' fg' (fromIntegral wraplen) >>=
+      mkFinalizedSurface
+
+-- TODO TTF_RenderUNICODE_Blended_wrapped
+-- TODO TTF_RenderGlyph_Blended_wrapped
+
 
